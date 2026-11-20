@@ -315,7 +315,7 @@ export function Table({ view }: { view: RoomView }) {
   ) : null;
 
   return (
-    <main className="felt flex h-dvh flex-col overflow-hidden">
+    <main className="felt flex h-dvh flex-col overflow-hidden" data-testid="table" data-seq={game.events.at(-1)?.seq ?? 0}>
       <TopBar view={view} game={game} />
 
       <section className="relative grid min-h-0 flex-1 grid-cols-[minmax(0,auto)_1fr_minmax(0,auto)] grid-rows-[auto_1fr_auto] gap-x-1 px-2 pt-1">
