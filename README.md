@@ -96,6 +96,24 @@ No secrets are needed. Never commit a real `.env`; `.env.example` lists the name
 6. Open the service and copy its URL, e.g. `https://guandan-server.onrender.com`.
    Check it in the browser: `https://…onrender.com/health` should show `{"ok":true,…}`.
 
+<details>
+<summary>If the Blueprint gives you trouble: create the service by hand</summary>
+
+Render → **New +** → **Web Service** → pick **wishang06/guandan**, then:
+
+| Setting           | Value                                               |
+| ----------------- | --------------------------------------------------- |
+| Runtime / Language | Node                                               |
+| Branch            | `main`                                              |
+| Root Directory    | *(leave empty)*                                     |
+| Build Command     | `npm ci --include=dev && npm run build -w server`   |
+| Start Command     | `npm run start -w server`                           |
+| Instance type     | Free                                                |
+| Health Check Path | `/health` (under *Advanced*)                        |
+| Environment       | `NODE_VERSION` = `22`, `CLIENT_ORIGIN` = *(see step 3)* |
+
+</details>
+
 ### 2 · Client on Vercel (about 3 minutes)
 
 1. Open **vercel.com/new** and continue with **GitHub**.
