@@ -56,6 +56,10 @@ test('four players play a full hand', async ({ browser }) => {
     (await Promise.all(pages.map((p) => p.getByTestId('hand-result').count()))).every((n) => n > 0);
 
   const takeTurn = async (p: Page) => {
+    // Every accepted move bumps the table's event sequence number. (Waiting for "your
+    // turn" to disappear is not enough: after 接风 the lead can come straight back.)
+    const table = p.getByTestId('table');
+    const seq = await table.getAttribute('data-seq');
     const hint = p.getByTestId('hint');
     if ((await hint.getAttribute('data-has-hint')) === 'true') {
       await hint.click();
@@ -65,7 +69,7 @@ test('four players play a full hand', async ({ browser }) => {
     } else {
       await p.getByTestId('pass').click();
     }
-    await expect(p.getByTestId('your-turn')).toHaveCount(0, { timeout: 5_000 });
+    await expect(table).not.toHaveAttribute('data-seq', seq!, { timeout: 5_000 });
   };
 
   let turns = 0;
