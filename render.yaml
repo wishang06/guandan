@@ -1,0 +1,30 @@
+# Render Blueprint for the game server (Node + Socket.IO, WebSockets supported).
+# Dashboard → New → Blueprint → pick this repo. See README "Deploy" for the steps.
+services:
+  - type: web
+    name: guandan-server
+    runtime: node
+    plan: free
+    # Pick the region closest to your players: oregon, ohio, virginia, frankfurt, singapore.
+    region: oregon
+    # Dev dependencies (tsup) are needed to bundle the server.
+    buildCommand: npm ci --include=dev && npm run build -w server
+    startCommand: npm run start -w server
+    healthCheckPath: /health
+    # Render redeploys automatically on every push to the connected branch.
+    # Only redeploy when server-side code changes.
+    buildFilter:
+      paths:
+        - server/**
+        - shared/**
+        - package.json
+        - package-lock.json
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Your Vercel URL, e.g. https://guandan.vercel.app (comma-separate several;
+      # wildcards allowed, e.g. https://guandan-*.vercel.app for preview deploys).
+      # Leave empty to allow any origin.
+      - key: CLIENT_ORIGIN
+        sync: false
