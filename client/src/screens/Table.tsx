@@ -5,7 +5,7 @@ import {
   rankLabel,
   returnCandidates,
   sameKey,
-  suggestPlays,
+  smartSuggestions,
   tributeCandidates,
   type Combo,
   type GameView,
@@ -88,8 +88,11 @@ export function Table({ view }: { view: RoomView }) {
     [selectedCards, legal, level],
   );
   const suggestions = useMemo(
-    () => (myTurn ? suggestPlays(game.myHand, level, current) : []),
-    [myTurn, game.myHand, level, current],
+    () =>
+      myTurn
+        ? smartSuggestions({ seat: me, hand: game.myHand, level, lastPlay: game.lastPlay, cardCounts: game.cardCounts })
+        : [],
+    [myTurn, me, game.myHand, level, game.lastPlay, game.cardCounts],
   );
   const hintIdx = useRef(0);
   const hinted = useRef<Combo | null>(null);

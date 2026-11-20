@@ -40,6 +40,9 @@ interface GameContextValue {
   leave: () => Promise<void>;
   setSeat: (seat: Seat) => Promise<ClientAck>;
   setReady: (ready: boolean) => Promise<ClientAck>;
+  addBot: (seat: Seat) => Promise<ClientAck>;
+  removeBot: (seat: Seat) => Promise<ClientAck>;
+  fillBots: () => Promise<ClientAck>;
   updateSettings: (s: Partial<RoomSettings>) => Promise<ClientAck>;
   start: () => Promise<ClientAck>;
   act: (a: Action) => Promise<ClientAck>;
@@ -150,6 +153,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       },
       setSeat: (seat) => emit('room:seat', { seat }),
       setReady: (ready) => emit('room:ready', { ready }),
+      addBot: (seat) => emit('room:addBot', { seat }),
+      removeBot: (seat) => emit('room:removeBot', { seat }),
+      fillBots: () => emit('room:fillBots'),
       updateSettings: (s) => emit('room:settings', s),
       start: () => emit('room:start'),
       act: (a) => emit('game:action', a),

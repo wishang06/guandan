@@ -123,6 +123,9 @@ export interface ClientToServerEvents {
   'room:seat': (p: { seat: Seat }, ack: (r: Ack) => void) => void;
   'room:ready': (p: { ready: boolean }, ack: (r: Ack) => void) => void;
   'room:settings': (p: Partial<RoomSettings>, ack: (r: Ack) => void) => void;
+  'room:addBot': (p: { seat: Seat }, ack: (r: Ack) => void) => void;
+  'room:removeBot': (p: { seat: Seat }, ack: (r: Ack) => void) => void;
+  'room:fillBots': (ack: (r: Ack) => void) => void;
   'room:start': (ack: (r: Ack) => void) => void;
   'game:action': (p: Action, ack: (r: Ack) => void) => void;
   'game:next': (ack: (r: Ack) => void) => void;

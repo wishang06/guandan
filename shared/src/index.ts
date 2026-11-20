@@ -8,3 +8,4 @@ export * from './rng';
 export * from './protocol';
 export * from './view';
 export * from './hints';
+export * from './bot';

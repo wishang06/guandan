@@ -49,41 +49,68 @@ export function Lobby({ view }: { view: RoomView }) {
     const ally = me !== null && s.seat % 2 === me % 2;
     const place = ['col-start-2 row-start-3', 'col-start-3 row-start-2', 'col-start-2 row-start-1', 'col-start-1 row-start-2'][pos];
     const mine = s.seat === me;
+    const base = `${place} flex min-h-20 flex-col items-center justify-center rounded-xl px-2 py-2 text-center`;
+    if (!s.occupied) {
+      return (
+        <div
+          key={s.seat}
+          className={`${base} gap-1.5 border-2 border-dashed border-porcelain/25 text-porcelain/70`}
+          data-testid={`lobby-seat-${s.seat}`}
+        >
+          <span className="text-sm">{t('emptySeat')}</span>
+          <div className="flex flex-wrap justify-center gap-1.5">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run(() => game.setSeat(s.seat))}
+              className="rounded-full bg-porcelain/10 px-2.5 py-1 text-xs font-semibold text-porcelain hover:bg-porcelain/20"
+            >
+              {t('sitHere')}
+            </button>
+            {isHost && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(() => game.addBot(s.seat))}
+                className="rounded-full bg-brass/90 px-2.5 py-1 text-xs font-semibold text-lacquer hover:bg-brass"
+                data-testid={`add-bot-${s.seat}`}
+              >
+                {t('addBot')}
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
     return (
-      <button
+      <div
         key={s.seat}
-        type="button"
-        disabled={s.occupied || busy}
-        onClick={() => run(() => game.setSeat(s.seat))}
-        className={`${place} flex min-h-20 flex-col items-center justify-center rounded-xl px-2 py-2 text-center transition-colors ${
-          s.occupied
-            ? `bg-lacquer/90 ring-2 ${ally ? 'ring-brass' : 'ring-celadon/70'}`
-            : 'border-2 border-dashed border-porcelain/25 text-porcelain/60 hover:border-brass hover:text-porcelain'
-        }`}
+        className={`${base} bg-lacquer/90 ring-2 ${ally ? 'ring-brass' : 'ring-celadon/70'}`}
         data-testid={`lobby-seat-${s.seat}`}
       >
-        {s.occupied ? (
-          <>
-            <span className="max-w-full truncate text-lg font-semibold">
-              {s.nickname}
-              {mine ? ` (${t('you')})` : ''}
-            </span>
-            <span className="mt-0.5 flex gap-1 text-xs">
-              {s.isHost && <span className="rounded bg-brass px-1 font-semibold text-lacquer">{t('host')}</span>}
-              {s.isBot && <span className="rounded bg-black/30 px-1">{t('bot')}</span>}
-              {!s.isHost && (
-                <span className={s.ready ? 'text-brass-soft' : 'text-porcelain/50'}>{s.ready ? t('ready') : t('notReady')}</span>
-              )}
-              {!s.connected && <span className="text-porcelain/50">{t('disconnected')}</span>}
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="text-base">{t('emptySeat')}</span>
-            <span className="text-xs">{t('tapToSit')}</span>
-          </>
+        <span className="max-w-full truncate text-lg font-semibold">
+          {s.nickname}
+          {mine ? ` (${t('you')})` : ''}
+        </span>
+        <span className="mt-0.5 flex flex-wrap justify-center gap-1 text-xs">
+          {s.isHost && <span className="rounded bg-brass px-1 font-semibold text-lacquer">{t('host')}</span>}
+          {s.isBot && <span className="rounded bg-black/30 px-1">{t('bot')}</span>}
+          {!s.isHost && !s.isBot && (
+            <span className={s.ready ? 'text-brass-soft' : 'text-porcelain/50'}>{s.ready ? t('ready') : t('notReady')}</span>
+          )}
+          {!s.connected && <span className="text-porcelain/50">{t('disconnected')}</span>}
+        </span>
+        {s.isBot && isHost && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => run(() => game.removeBot(s.seat))}
+            className="mt-1 text-xs text-porcelain/60 underline hover:text-porcelain"
+          >
+            {t('removeBot')}
+          </button>
         )}
-      </button>
+      </div>
     );
   };
 
@@ -141,6 +168,14 @@ export function Lobby({ view }: { view: RoomView }) {
 
       <section className="mx-auto mt-6 max-w-md text-center">
         {status && <p className="mb-3 text-porcelain/75">{status}</p>}
+        {isHost && filled < 4 && (
+          <div className="mb-3">
+            <p className="mb-2 text-sm text-porcelain/60">{t('soloHint')}</p>
+            <Button tone="brass" className="w-full" disabled={busy} onClick={() => run(game.fillBots)} data-testid="fill-bots">
+              {t('fillBots')}
+            </Button>
+          </div>
+        )}
         {isHost ? (
           <Button
             tone="primary"

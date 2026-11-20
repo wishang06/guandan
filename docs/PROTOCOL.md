@@ -9,12 +9,15 @@ The server is authoritative: clients only send **intents**; every one is validat
 | Event            | Payload                         | Notes                                              |
 | ---------------- | ------------------------------- | -------------------------------------------------- |
 | `room:create`    | `{ nickname }`                  | Returns `{ code, playerId, token }`; you get seat 0 |
-| `room:join`      | `{ code, nickname }`            | Takes the first free seat                          |
+| `room:join`      | `{ code, nickname }`            | Takes the first free seat (or replaces a bot)      |
 | `room:resume`    | `{ code, token }`               | Reclaims your seat after a reconnect               |
 | `room:leave`     | –                               | Lobby: frees the seat. In game: autopilot takes over |
 | `room:seat`      | `{ seat }`                      | Lobby only, to a free seat                         |
 | `room:ready`     | `{ ready }`                     | Lobby only                                         |
 | `room:settings`  | `{ turnSeconds?, aMaxFails? }`  | Host only                                          |
+| `room:addBot`    | `{ seat }`                      | Host only, lobby, empty seat                       |
+| `room:removeBot` | `{ seat }`                      | Host only, lobby                                   |
+| `room:fillBots`  | –                               | Host only: a bot in every empty seat               |
 | `room:start`     | –                               | Host only; 4 seated, everyone else ready           |
 | `game:action`    | `Action`                        | `play` / `pass` / `tribute` / `return`             |
 | `game:next`      | –                               | Confirm the end-of-hand screen                     |
@@ -41,6 +44,7 @@ the player resumes.
 
 `turnSeconds` (default 30, 0 = off). On expiry the server plays the default action
 (`timeoutAction`): pass when following, lowest single when leading, highest card for
-tribute, lowest ≤10 card for the return. Autopilot seats act after ~1 s. The
+tribute, lowest ≤10 card for the return. Bots and players on autopilot are played by
+`botDecide` (`shared/src/bot.ts`) after ~1 s (`BOT_DELAY_MS` overrides it). The
 end-of-hand screen deals the next hand when every connected player confirms, or after
 30 s.

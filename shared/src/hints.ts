@@ -1,6 +1,7 @@
 import type { Card } from './cards';
 import { comboStrength, isBomb, sequenceRanks, type Combo, type ComboKey } from './combos';
 import { generateLegalPlays, strongestReading } from './generate';
+import { botChoosePlay, type BotContext } from './bot';
 
 /** Lowest natural rank a combo spends (sequences count from their bottom card). */
 export function comboFloor(c: ComboKey): number {
@@ -28,4 +29,17 @@ export function suggestPlays(hand: readonly Card[], level: number, current: Comb
   if (current) normal.sort((a, b) => a.rank - b.rank);
   else normal.sort((a, b) => comboFloor(a) - comboFloor(b) || b.size - a.size || a.rank - b.rank);
   return [...normal, ...bombs];
+}
+
+/**
+ * Hint list for a player: the bot's recommended play first (so the first tap is a
+ * sensible move that keeps bombs intact), then every other legal play in order.
+ */
+export function smartSuggestions(ctx: BotContext): Combo[] {
+  const all = suggestPlays(ctx.hand, ctx.level, ctx.lastPlay?.combo ?? null);
+  const best = botChoosePlay(ctx);
+  if (!best) return all;
+  const ids = (c: Combo) => c.cards.map((x) => x.id).sort((a, b) => a - b).join(',');
+  const key = ids(best);
+  return [best, ...all.filter((c) => !(ids(c) === key && c.type === best.type))];
 }
