@@ -23,6 +23,8 @@ test('a solo player plays a full hand against bots', async ({ browser }) => {
       await page.waitForTimeout(40);
       continue;
     }
+    const table = page.getByTestId('table');
+    const seq = await table.getAttribute('data-seq');
     const hint = page.getByTestId('hint');
     if ((await hint.getAttribute('data-has-hint')) === 'true') {
       await hint.click();
@@ -31,7 +33,8 @@ test('a solo player plays a full hand against bots', async ({ browser }) => {
       await page.getByTestId('pass').click();
     }
     myTurns++;
-    await expect(page.getByTestId('your-turn')).toHaveCount(0, { timeout: 5_000 }).catch(() => {});
+    // Wait for the move to land (the lead can come straight back after 接风).
+    await expect(table).not.toHaveAttribute('data-seq', seq!, { timeout: 5_000 });
   }
 
   const order = await page.getByTestId('hand-result').locator('ol li').allTextContents();
