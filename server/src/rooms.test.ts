@@ -244,7 +244,7 @@ describe('reconnect', () => {
 
 describe('between hands', () => {
   function finishHand(room: Room, members: Member[]) {
-    room.match = createMatch({ hands: hands(['S3', 'S4 S5', 'S6', 'S7 S8']), firstLeader: 0 });
+    room.match = createMatch({ hands: hands(['S3', 'S4 S5', 'S6', 'S7 S8']), firstLeader: 0, seed: 1 });
     const id = (seat: number, i = 0) => room.match!.hand.hands[seat]![i]!.id;
     ok(mgr.act(room.code, members[0]!.playerId, { type: 'play', cardIds: [id(0)] }));
     for (const s of [1, 2, 3]) ok(mgr.act(room.code, members[s]!.playerId, { type: 'pass' }));
@@ -260,8 +260,11 @@ describe('between hands', () => {
     expect(room.match!.hand.number).toBe(1);
     expect(mgr.viewFor(room, members[0]!.playerId).game!.nextReady).toEqual([0, 1, 2]);
     ok(mgr.nextHand(room.code, members[3]!.playerId));
-    expect(room.match!.hand.number).toBe(2);
-    expect(room.match!.hand.phase).toBe('tribute');
+    const hand = room.match!.hand;
+    expect(hand.number).toBe(2);
+    // Double-down: tribute, unless the two losers hold both big jokers (anti-tribute).
+    expect(hand.tribute?.kind).toMatch(/^(double|anti)$/);
+    expect(hand.phase).toBe(hand.tribute!.kind === 'anti' ? 'play' : 'tribute');
   });
 
   it('deals the next hand automatically after the timeout', () => {
