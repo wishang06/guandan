@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { TURN_SECONDS_OPTIONS, type RoomView, type Seat, type SeatView } from '@guandan/shared';
-import { Button, LangToggle, SoundToggle } from '../components/Chrome';
+import { Button, FxToggle, LangToggle, SoundToggle } from '../components/Chrome';
 import { useI18n, type MessageKey } from '../i18n';
 import { unlockAudio } from '../lib/sound';
 import { useGame, type ClientAck } from '../state/game';
@@ -11,7 +11,7 @@ const A_RESET_OPTIONS = [0, 1, 2, 3, 5] as const;
 export const relativePos = (seat: Seat, me: Seat | null) => ((seat - (me ?? 0) + 4) % 4) as 0 | 1 | 2 | 3;
 
 export function Lobby({ view }: { view: RoomView }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const game = useGame();
   const [busy, setBusy] = useState(false);
   const me = view.you.seat;
@@ -84,8 +84,8 @@ export function Lobby({ view }: { view: RoomView }) {
     }
     return (
       <div
-        key={s.seat}
-        className={`${base} bg-lacquer/90 ring-2 ${ally ? 'ring-brass' : 'ring-celadon/70'}`}
+        key={`${s.seat}-${s.playerId}`}
+        className={`${base} seat-pop bg-lacquer/90 ring-2 ${ally ? 'ring-brass' : 'ring-celadon/70'}`}
         data-testid={`lobby-seat-${s.seat}`}
       >
         <span className="max-w-full truncate text-lg font-semibold">
@@ -96,7 +96,13 @@ export function Lobby({ view }: { view: RoomView }) {
           {s.isHost && <span className="rounded bg-brass px-1 font-semibold text-lacquer">{t('host')}</span>}
           {s.isBot && <span className="rounded bg-black/30 px-1">{t('bot')}</span>}
           {!s.isHost && !s.isBot && (
-            <span className={s.ready ? 'text-brass-soft' : 'text-porcelain/50'}>{s.ready ? t('ready') : t('notReady')}</span>
+            s.ready ? (
+              <span key="ready" className={`seal-badge ${lang === 'en' ? 'latin' : ''}`}>
+                {t('ready')}
+              </span>
+            ) : (
+              <span className="text-porcelain/50">{t('notReady')}</span>
+            )
           )}
           {!s.connected && <span className="text-porcelain/50">{t('disconnected')}</span>}
         </span>
@@ -115,12 +121,13 @@ export function Lobby({ view }: { view: RoomView }) {
   };
 
   return (
-    <main className="felt min-h-dvh px-4 pb-8 pt-3">
+    <main className="felt min-h-dvh overflow-x-clip px-4 pb-8 pt-3">
       <header className="mx-auto flex max-w-md items-center gap-2">
         <Button tone="ghost" className="px-2" onClick={() => void game.leave()} data-testid="leave">
           {t('leave')}
         </Button>
         <div className="flex-1" />
+        <FxToggle />
         <LangToggle />
         <SoundToggle />
       </header>
@@ -179,7 +186,7 @@ export function Lobby({ view }: { view: RoomView }) {
         {isHost ? (
           <Button
             tone="primary"
-            className="w-full py-3 text-lg"
+            className={`w-full py-3 text-lg ${!busy && filled === 4 && othersReady ? 'armed' : ''}`}
             disabled={busy || filled < 4 || !othersReady}
             onClick={() => run(game.start)}
             data-testid="start"

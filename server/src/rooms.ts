@@ -10,6 +10,7 @@ import {
   botDecide,
   buildGameView,
   createMatch,
+  isBomb,
   pendingSeats,
   startNextHand,
   timeoutAction,
@@ -50,6 +51,9 @@ export class Room {
   deadline: number | null = null;
   decisionKey = '';
   readonly nextReady = new Set<Seat>();
+  /** Hand number that was last dealt, and when play may begin after its deal. */
+  dealtHand = 0;
+  playFrom = 0;
   turnTimer: ReturnType<typeof setTimeout> | null = null;
   autoTimer: ReturnType<typeof setTimeout> | null = null;
   nextTimer: ReturnType<typeof setTimeout> | null = null;
@@ -83,6 +87,10 @@ export interface RoomManagerOptions {
   /** Rooms with nobody connected are deleted after this long. */
   idleRoomMs?: number;
   nextHandSeconds?: number;
+  /** Pause after each deal before bots move and the turn timer starts (deal animation). */
+  dealPauseMs?: number;
+  /** Extra bot think time after a bomb (×3 after four jokers). */
+  bombPauseMs?: number;
   decide?: DecidePolicy;
   onChange?: (room: Room) => void;
   /** Called when a room is deleted (so sockets can be told). */
@@ -106,6 +114,8 @@ export class RoomManager {
   private readonly graceMs: number;
   private readonly idleRoomMs: number;
   private readonly nextHandMs: number;
+  private readonly dealPauseMs: number;
+  private readonly bombPauseMs: number;
   decide: DecidePolicy;
 
   constructor(opts: RoomManagerOptions = {}) {
@@ -113,6 +123,8 @@ export class RoomManager {
     this.graceMs = opts.graceMs ?? RECONNECT_GRACE_MS;
     this.idleRoomMs = opts.idleRoomMs ?? 15 * 60 * 1000;
     this.nextHandMs = (opts.nextHandSeconds ?? NEXT_HAND_SECONDS) * 1000;
+    this.dealPauseMs = opts.dealPauseMs ?? 2600;
+    this.bombPauseMs = opts.bombPauseMs ?? 800;
     this.decide = opts.decide ?? botDecide;
     this.onChange = opts.onChange ?? (() => {});
     this.onDelete = opts.onDelete ?? (() => {});
@@ -294,6 +306,7 @@ export class RoomManager {
     room.match = createMatch({ seed: opts.seed, config: { aMaxFails: room.settings.aMaxFails } });
     room.status = 'playing';
     room.decisionKey = '';
+    room.dealtHand = 0;
     room.nextReady.clear();
     this.afterChange(room);
     return ok(undefined);
@@ -495,6 +508,11 @@ export class RoomManager {
       return;
     }
     const hand = m.hand;
+    if (hand.number !== room.dealtHand) {
+      room.dealtHand = hand.number;
+      room.playFrom = Date.now() + this.dealPauseMs;
+    }
+    const pause = Math.max(0, room.playFrom - Date.now());
     const key = hand.phase === 'play' ? `${hand.number}|play|${m.eventSeq}` : `${hand.number}|${hand.phase}`;
     if (key !== room.decisionKey) {
       room.decisionKey = key;
@@ -507,13 +525,16 @@ export class RoomManager {
           room.nextTimer = setTimeout(() => this.startNext(room), this.nextHandMs);
         }
       } else if (room.settings.turnSeconds > 0) {
-        const ms = room.settings.turnSeconds * 1000;
+        const ms = room.settings.turnSeconds * 1000 + pause;
         room.deadline = Date.now() + ms;
         room.turnTimer = setTimeout(() => this.onTimeout(room), ms);
       }
     }
     if (hand.phase !== 'done' && pendingSeats(m).some((s) => this.isAuto(room, s))) {
-      const delay = this.autoDelayMs * (0.8 + Math.random() * 0.4);
+      // Let a bomb land before the next seat answers (longer for four jokers).
+      const last = hand.lastPlay?.combo;
+      const awe = !last || !isBomb(last) || this.bombPauseMs === 0 ? 0 : last.type === 'jokerBomb' ? this.bombPauseMs * 3 : this.bombPauseMs;
+      const delay = pause + awe + this.autoDelayMs * (0.8 + Math.random() * 0.4);
       room.autoTimer = setTimeout(() => this.runAutopilot(room), delay);
     }
   }

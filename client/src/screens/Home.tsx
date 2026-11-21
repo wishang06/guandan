@@ -1,10 +1,14 @@
-import { useState, type FormEvent } from 'react';
-import { ROOM_CODE_LENGTH } from '@guandan/shared';
-import { Button, LangToggle, SoundToggle } from '../components/Chrome';
+import { useState, type CSSProperties, type FormEvent } from 'react';
+import { ROOM_CODE_LENGTH, type Card } from '@guandan/shared';
+import { CardFace } from '../components/Card';
+import { Button, FxToggle, LangToggle, SoundToggle } from '../components/Chrome';
 import { useI18n, type MessageKey } from '../i18n';
 import { unlockAudio } from '../lib/sound';
 import { KEYS, load, save } from '../lib/storage';
 import { useGame } from '../state/game';
+
+/** 10 J Q K A of hearts — the hand everyone hopes for. */
+const HERO: Card[] = [10, 11, 12, 13, 14].map((rank, i) => ({ id: 1000 + i, suit: 'H', rank }));
 
 export function Home() {
   const { t } = useI18n();
@@ -39,23 +43,28 @@ export function Home() {
   };
 
   return (
-    <main className="felt min-h-dvh px-4 pb-10 pt-3">
+    <main className="felt min-h-dvh overflow-x-clip px-4 pb-10 pt-3">
       <div className="mx-auto flex max-w-sm justify-end gap-2">
+        <FxToggle />
         <LangToggle />
         <SoundToggle />
       </div>
-      <div className="mx-auto mt-[8vh] max-w-sm">
-        <h1 className="text-center leading-none">
-          <span className="block font-[family-name:var(--font-card)] text-7xl font-black tracking-tight text-porcelain">
-            掼蛋
-          </span>
-          <span className="mt-2 block font-[family-name:var(--font-card)] text-2xl font-bold italic text-brass">
-            Guandan
-          </span>
+      <div className="mx-auto mt-[3vh] max-w-sm">
+        {/* The opening flourish: a heart straight flush fans out, then the title is stamped over it. */}
+        <div className="hero-fan" aria-hidden="true">
+          {HERO.map((c, i) => (
+            <div key={c.id} className="hero-card" style={{ ['--i' as string]: i, ['--r' as string]: `${(i - 2) * 13}deg` } as CSSProperties}>
+              <CardFace card={c} level={0} width={84} floating={false} tabIndex={-1} />
+            </div>
+          ))}
+        </div>
+        <h1 className="relative -mt-12 text-center leading-none">
+          <span className="hero-title block text-8xl text-porcelain">掼蛋</span>
+          <span className="mt-1 block font-[family-name:var(--font-card)] text-2xl font-bold italic text-brass">Guandan</span>
         </h1>
         <p className="mt-4 text-center text-lg text-porcelain/80">{t('tagline')}</p>
 
-        <form onSubmit={invited ? join : create} className="mt-10 rounded-2xl bg-lacquer/90 p-5 shadow-2xl ring-1 ring-brass/20">
+        <form onSubmit={invited ? join : create} className="rise-in mt-8 rounded-2xl bg-lacquer/90 p-5 shadow-2xl ring-1 ring-brass/20">
           <label className="block text-sm text-porcelain/70" htmlFor="nickname">
             {t('nickname')}
           </label>
@@ -114,6 +123,11 @@ export function Home() {
             </p>
           )}
         </form>
+        <p className="mt-5 text-center">
+          <a href="?showcase" className="text-sm text-porcelain/60 underline decoration-brass/50 underline-offset-4 hover:text-porcelain" data-testid="showcase-link">
+            {t('showcase')}
+          </a>
+        </p>
       </div>
     </main>
   );

@@ -45,6 +45,8 @@ the player resumes.
 `turnSeconds` (default 30, 0 = off). On expiry the server plays the default action
 (`timeoutAction`): pass when following, lowest single when leading, highest card for
 tribute, lowest ≤10 card for the return. Bots and players on autopilot are played by
-`botDecide` (`shared/src/bot.ts`) after ~1 s (`BOT_DELAY_MS` overrides it). The
+`botDecide` (`shared/src/bot.ts`) after ~1 s (`BOT_DELAY_MS` overrides it). After a
+deal nobody acts for `DEAL_PAUSE_MS` (2.6 s, added to the first turn's timer) so the deal
+can be animated, and bots wait a little longer before answering a bomb. The
 end-of-hand screen deals the next hand when every connected player confirms, or after
 30 s.

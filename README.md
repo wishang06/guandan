@@ -3,10 +3,11 @@
 A mobile-first web app for playing Guandan with friends (or bots).
 
 <p>
-  <img src="docs/screenshots/table-portrait.jpg" alt="Table in portrait" width="260">
-  <img src="docs/screenshots/lobby.jpg" alt="Lobby" width="260">
+  <img src="docs/screenshots/table-portrait.jpg" alt="Table in portrait" width="230">
+  <img src="docs/screenshots/fx-bomb.jpg" alt="A six-card bomb" width="230">
+  <img src="docs/screenshots/fx-four-jokers.jpg" alt="Four jokers" width="230">
 </p>
-<img src="docs/screenshots/table-landscape.jpg" alt="Table in landscape" width="540">
+<img src="docs/screenshots/table-landscape.jpg" alt="Table in landscape" width="700">
 
 | Package   | What it is                                                     |
 | --------- | -------------------------------------------------------------- |
@@ -16,6 +17,7 @@ A mobile-first web app for playing Guandan with friends (or bots).
 | `e2e/`    | Playwright test: 4 browsers play a full hand                     |
 
 Rules as implemented: [docs/RULES.md](docs/RULES.md). Socket protocol: [docs/PROTOCOL.md](docs/PROTOCOL.md).
+Visuals and effects: [docs/EFFECTS.md](docs/EFFECTS.md).
 
 ## Quick start
 
@@ -57,7 +59,9 @@ it wins ~95% of hands against a naive "lowest card" player.
   allowed to give or return.
 * Reloading or losing signal is fine: you get your seat back automatically within 2
   minutes (after that, the server keeps playing for you until you return).
-* 中文 / EN and sound toggles are in the top bar.
+* 中文 / EN, sound and effects (✦) toggles are in the top bar. Turn effects down if you
+  prefer less motion.
+* Curious what a 天王炸 looks like? Tap *Preview the effects* on the home screen.
 
 ## Deploy (Render + Vercel)
 
@@ -77,6 +81,7 @@ from a phone browser.
 | Render | `NODE_VERSION`    | `22`                                     | Already set by `render.yaml`. |
 | Render | `PORT`            | *(set by Render)*                        | Don't set it yourself. |
 | Render | `BOT_DELAY_MS`    | `900`                                    | Optional: bot think time in ms. |
+| Render | `DEAL_PAUSE_MS`   | `2600`                                   | Optional: pause after each deal so the dealing animation can finish. |
 | Vercel | `VITE_SERVER_URL` | `https://guandan-server.onrender.com`    | URL of the Render server, **no trailing slash**. Read at build time, so redeploy after changing it. |
 
 No secrets are needed. Never commit a real `.env`; `.env.example` lists the names.

@@ -8,7 +8,7 @@ let changes: number;
 beforeEach(() => {
   vi.useFakeTimers();
   changes = 0;
-  mgr = new RoomManager({ autoDelayMs: 500, onChange: () => changes++ });
+  mgr = new RoomManager({ autoDelayMs: 500, dealPauseMs: 0, bombPauseMs: 0, onChange: () => changes++ });
 });
 
 afterEach(() => {
@@ -360,5 +360,50 @@ describe('bots', () => {
     vi.advanceTimersByTime(1200);
     expect(room.match!.eventSeq).toBeGreaterThan(seq);
     expect(room.match!.eventSeq).toBeGreaterThan(before);
+  });
+});
+
+describe('deal pause', () => {
+  it('holds bots and the turn timer back while the cards are dealt', () => {
+    const paused = new RoomManager({ autoDelayMs: 500, dealPauseMs: 2500, bombPauseMs: 0 });
+    try {
+      const { room, member } = ok(paused.create('Solo'));
+      paused.connect(room, member, 'sock');
+      ok(paused.fillBots(room.code, member.playerId));
+      ok(paused.start(room.code, member.playerId, { seed: 5 }));
+      // The turn timer includes the pause…
+      expect(paused.viewFor(room, member.playerId).game!.deadline).toBe(Date.now() + 32_500);
+      // …and no bot moves until the deal has had time to play out.
+      vi.advanceTimersByTime(2400);
+      expect(room.match!.eventSeq).toBe(1);
+      if (room.match!.hand.turn !== member.seat) {
+        vi.advanceTimersByTime(900);
+        expect(room.match!.eventSeq).toBeGreaterThan(1);
+      }
+    } finally {
+      paused.dispose();
+    }
+  });
+});
+
+describe('bomb pause', () => {
+  it('bots take a beat before answering a bomb', () => {
+    const awed = new RoomManager({ autoDelayMs: 500, dealPauseMs: 0, bombPauseMs: 1000 });
+    try {
+      const { room, member } = ok(awed.create('Solo'));
+      awed.connect(room, member, 'sock');
+      ok(awed.fillBots(room.code, member.playerId));
+      ok(awed.start(room.code, member.playerId, { seed: 5 }));
+      room.match = createMatch({ hands: hands(['S7 D7 C7 H7 S3', 'S4 S10', 'S5 SJ', 'S6 SQ']), firstLeader: 0 });
+      room.match.hand.level = 9;
+      const bomb = room.match.hand.hands[0]!.filter((c) => c.rank === 7).map((c) => c.id);
+      ok(awed.act(room.code, member.playerId, { type: 'play', cardIds: bomb }));
+      vi.advanceTimersByTime(900);
+      expect(room.match!.hand.trick).toHaveLength(1); // still taking it in
+      vi.advanceTimersByTime(800);
+      expect(room.match!.hand.trick.length).toBeGreaterThan(1);
+    } finally {
+      awed.dispose();
+    }
   });
 });
