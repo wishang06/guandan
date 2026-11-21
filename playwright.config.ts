@@ -18,7 +18,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'npx tsx server/src/index.ts',
-      env: { PORT: String(SERVER_PORT) },
+      env: { PORT: String(SERVER_PORT), BOT_DELAY_MS: '120' },
       url: `http://localhost:${SERVER_PORT}/health`,
       reuseExistingServer: false,
       timeout: 60_000,

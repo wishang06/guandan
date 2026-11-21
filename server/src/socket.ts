@@ -113,6 +113,31 @@ export function attachSocketHandlers(io: IO, manager: RoomManager) {
       }),
     );
 
+    socket.on('room:addBot', (p, ack) =>
+      guard(ack, (reply) => {
+        const seat = parseSeat(p?.seat);
+        if (!current) return reply({ ok: false, error: 'not_in_room' });
+        if (seat === null) return reply(BAD);
+        reply(manager.addBot(current.code, current.playerId, seat));
+      }),
+    );
+
+    socket.on('room:removeBot', (p, ack) =>
+      guard(ack, (reply) => {
+        const seat = parseSeat(p?.seat);
+        if (!current) return reply({ ok: false, error: 'not_in_room' });
+        if (seat === null) return reply(BAD);
+        reply(manager.removeBot(current.code, current.playerId, seat));
+      }),
+    );
+
+    socket.on('room:fillBots', (ack) =>
+      guard(ack, (reply) => {
+        if (!current) return reply({ ok: false, error: 'not_in_room' });
+        reply(manager.fillBots(current.code, current.playerId));
+      }),
+    );
+
     socket.on('room:start', (ack) =>
       guard(ack, (reply) => {
         if (!current) return reply({ ok: false, error: 'not_in_room' });

@@ -237,7 +237,7 @@ describe('reconnect', () => {
     for (const m of members) m.autopilot = true;
     room.match = createMatch({ hands: hands(['S3 S9', 'S4 S10', 'S5 SJ', 'S6 SQ']), firstLeader: 0 });
     ok(mgr.act(room.code, members[0]!.playerId, { type: 'play', cardIds: [room.match.hand.hands[0]![0]!.id] }));
-    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(700);
     expect(room.match!.hand.trick).toHaveLength(2);
   });
 });
@@ -298,5 +298,67 @@ describe('housekeeping', () => {
   it('notifies on changes', () => {
     setupRoom(2);
     expect(changes).toBeGreaterThan(0);
+  });
+});
+
+describe('bots', () => {
+  it('host adds, removes and fills bots; only in the lobby', () => {
+    const { room, members } = setupRoom(2);
+    const [host, guest] = members as [Member, Member];
+    expect(mgr.addBot(room.code, guest.playerId, 2)).toMatchObject({ ok: false, error: 'not_host' });
+    ok(mgr.addBot(room.code, host.playerId, 2));
+    expect(mgr.addBot(room.code, host.playerId, 2)).toMatchObject({ ok: false, error: 'seat_taken' });
+    const view = mgr.viewFor(room, host.playerId);
+    expect(view.seats[2]).toMatchObject({ isBot: true, ready: true, connected: true, autopilot: true });
+    expect(view.seats[2]!.nickname).toMatch(/^Bot /);
+    ok(mgr.removeBot(room.code, host.playerId, 2));
+    expect(room.seats[2]).toBeNull();
+    expect(mgr.removeBot(room.code, host.playerId, 1)).toMatchObject({ ok: false, error: 'bad_request' });
+    ok(mgr.fillBots(room.code, host.playerId));
+    expect(room.seats.every((s) => s !== null)).toBe(true);
+    expect(new Set([...room.members.values()].map((m) => m.nickname)).size).toBe(4);
+  });
+
+  it('a human joining a full table with bots takes a bot seat', () => {
+    const { room, members } = setupRoom(1);
+    ok(mgr.fillBots(room.code, members[0]!.playerId));
+    const newcomer = ok(mgr.join(room.code, 'Friend')).member;
+    expect(newcomer.seat).toBe(1);
+    expect([...room.members.values()].filter((m) => m.isBot)).toHaveLength(2);
+  });
+
+  it('the room closes when the last human leaves, even with bots seated', () => {
+    const { room, members } = setupRoom(1);
+    ok(mgr.fillBots(room.code, members[0]!.playerId));
+    ok(mgr.leave(room.code, members[0]!.playerId));
+    expect(mgr.rooms.has(room.code)).toBe(false);
+  });
+
+  it('one human and three bots play a full hand (the human times out every turn)', () => {
+    const { room, members } = setupRoom(1);
+    const human = members[0]!;
+    ok(mgr.fillBots(room.code, human.playerId));
+    ok(mgr.start(room.code, human.playerId, { seed: 99 }));
+    for (let i = 0; i < 2000 && room.match!.results.length === 0; i++) vi.advanceTimersByTime(1000);
+    const result = room.match!.results[0]!;
+    expect(result.finishOrder).toHaveLength(4);
+    // The human confirms and hand 2 starts at once (bots are always ready).
+    ok(mgr.nextHand(room.code, human.playerId));
+    expect(room.match!.hand.number).toBe(2);
+  });
+
+  it('a human who drops out is played by the bot policy after the grace period', () => {
+    const { room } = startGame(3);
+    const turn = memberAtTurn(room);
+    mgr.disconnect(room.code, turn.playerId, `sock${turn.seat}`);
+    vi.advanceTimersByTime(121_000);
+    expect(turn.autopilot).toBe(true);
+    const before = room.match!.eventSeq;
+    // Make it the dropped player's turn and let the autopilot act quickly.
+    for (let i = 0; i < 400 && room.match!.hand.turn !== turn.seat; i++) vi.advanceTimersByTime(1000);
+    const seq = room.match!.eventSeq;
+    vi.advanceTimersByTime(1200);
+    expect(room.match!.eventSeq).toBeGreaterThan(seq);
+    expect(room.match!.eventSeq).toBeGreaterThan(before);
   });
 });

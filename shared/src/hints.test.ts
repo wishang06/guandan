@@ -18,3 +18,19 @@ describe('suggestPlays', () => {
     expect(suggestPlays(cards('S3 S4'), 2, { type: 'pair', rank: 9, size: 2 })).toEqual([]);
   });
 });
+
+describe('smartSuggestions', () => {
+  it('puts the bot’s bomb-preserving choice first', async () => {
+    const { smartSuggestions } = await import('./hints');
+    // Level 2: leading with 7777 + 9 + Q, plain ordering would offer a 7 first.
+    const s = smartSuggestions({
+      seat: 0,
+      hand: cards('S7 D7 C7 H7 S9 SQ'),
+      level: 2,
+      lastPlay: null,
+      cardCounts: [6, 20, 20, 20],
+    });
+    expect(s[0]).toMatchObject({ type: 'single', rank: 9 });
+    expect(new Set(s.map((c) => `${c.type}:${c.rank}:${c.cards.map((x) => x.id).join()}`)).size).toBe(s.length);
+  });
+});

@@ -7,6 +7,7 @@ import {
   ROOM_CODE_LENGTH,
   SEATS,
   applyAction,
+  botDecide,
   buildGameView,
   createMatch,
   pendingSeats,
@@ -90,6 +91,13 @@ export interface RoomManagerOptions {
 
 const newId = (bytes: number) => randomBytes(bytes).toString('hex');
 
+const BOT_NAMES = ['Bot Pearl', 'Bot Jade', 'Bot Amber', 'Bot Coral', 'Bot Onyx', 'Bot Ivory'];
+
+function botName(room: Room): string {
+  const used = new Set([...room.members.values()].map((m) => m.nickname));
+  return BOT_NAMES.find((n) => !used.has(n)) ?? `Bot ${room.members.size + 1}`;
+}
+
 export class RoomManager {
   readonly rooms = new Map<string, Room>();
   onChange: (room: Room) => void;
@@ -105,7 +113,7 @@ export class RoomManager {
     this.graceMs = opts.graceMs ?? RECONNECT_GRACE_MS;
     this.idleRoomMs = opts.idleRoomMs ?? 15 * 60 * 1000;
     this.nextHandMs = (opts.nextHandSeconds ?? NEXT_HAND_SECONDS) * 1000;
-    this.decide = opts.decide ?? ((m, s) => timeoutAction(m, s));
+    this.decide = opts.decide ?? botDecide;
     this.onChange = opts.onChange ?? (() => {});
     this.onDelete = opts.onDelete ?? (() => {});
   }
@@ -128,8 +136,14 @@ export class RoomManager {
     const room = this.rooms.get(code);
     if (!room) return err('room_not_found');
     if (room.status !== 'lobby') return err('game_in_progress');
-    const seat = SEATS.find((s) => room.seats[s] === null);
-    if (seat === undefined) return err('room_full');
+    let seat = SEATS.find((s) => room.seats[s] === null);
+    if (seat === undefined) {
+      // A full table with bots: the newcomer takes the first bot's seat.
+      const bot = SEATS.map((s) => room.memberAt(s)).find((m) => m?.isBot);
+      if (!bot) return err('room_full');
+      seat = bot.seat!;
+      this.removeMember(room, bot, false);
+    }
     const member = this.addMember(room, nickname, seat);
     this.changed(room);
     return ok({ room, member });
@@ -212,6 +226,41 @@ export class RoomManager {
     if (member.seat !== null) room.seats[member.seat] = null;
     room.seats[seat] = playerId;
     member.seat = seat;
+    this.changed(room);
+    return ok(undefined);
+  }
+
+  /** Host adds a bot to an empty seat. */
+  addBot(code: string, playerId: string, seat: Seat): Result {
+    const found = this.lobbyMember(code, playerId);
+    if (!found.ok) return found;
+    const { room } = found.data;
+    if (room.hostId !== playerId) return err('not_host');
+    if (room.seats[seat] !== null) return err('seat_taken');
+    this.addMember(room, botName(room), seat, true);
+    this.changed(room);
+    return ok(undefined);
+  }
+
+  /** Host removes a bot. */
+  removeBot(code: string, playerId: string, seat: Seat): Result {
+    const found = this.lobbyMember(code, playerId);
+    if (!found.ok) return found;
+    const { room } = found.data;
+    if (room.hostId !== playerId) return err('not_host');
+    const bot = room.memberAt(seat);
+    if (!bot?.isBot) return err('bad_request');
+    this.removeMember(room, bot);
+    return ok(undefined);
+  }
+
+  /** Host fills every empty seat with a bot. */
+  fillBots(code: string, playerId: string): Result {
+    const found = this.lobbyMember(code, playerId);
+    if (!found.ok) return found;
+    const { room } = found.data;
+    if (room.hostId !== playerId) return err('not_host');
+    for (const s of SEATS) if (room.seats[s] === null) this.addMember(room, botName(room), s, true);
     this.changed(room);
     return ok(undefined);
   }
@@ -464,7 +513,8 @@ export class RoomManager {
       }
     }
     if (hand.phase !== 'done' && pendingSeats(m).some((s) => this.isAuto(room, s))) {
-      room.autoTimer = setTimeout(() => this.runAutopilot(room), this.autoDelayMs);
+      const delay = this.autoDelayMs * (0.8 + Math.random() * 0.4);
+      room.autoTimer = setTimeout(() => this.runAutopilot(room), delay);
     }
   }
 
