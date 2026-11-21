@@ -1,5 +1,6 @@
 import { useEffect, useState, type ButtonHTMLAttributes } from 'react';
 import { useI18n } from '../i18n';
+import { setFxLevel, useFxLevel } from '../fx/settings';
 import { isMuted, onMutedChange, setMuted, unlockAudio } from '../lib/sound';
 import { useGame } from '../state/game';
 
@@ -45,6 +46,30 @@ export function SoundToggle() {
   );
 }
 
+/** Full effects ↔ reduced motion (no shake, flashes or particles). */
+export function FxToggle() {
+  const { t } = useI18n();
+  const level = useFxLevel();
+  const full = level === 'full';
+  return (
+    <button
+      type="button"
+      className={`grid h-8 w-9 place-items-center rounded-md hover:bg-black/40 ${full ? 'bg-black/25 text-brass-soft' : 'bg-black/25 text-porcelain/45'}`}
+      onClick={() => setFxLevel(full ? 'reduced' : 'full')}
+      aria-label={t('effects')}
+      aria-pressed={full}
+      title={full ? t('effectsFull') : t('effectsReduced')}
+      data-testid="fx-toggle"
+    >
+      <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden="true">
+        <path d="M12 2l1.8 5.6L19.5 9l-5.7 1.4L12 16l-1.8-5.6L4.5 9l5.7-1.4L12 2z" />
+        <path d="M18.5 14l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z" opacity={full ? 1 : 0.4} />
+        {!full && <path d="M4 20L20 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}
+      </svg>
+    </button>
+  );
+}
+
 export function Toasts() {
   const { toasts } = useGame();
   return (
@@ -52,7 +77,7 @@ export function Toasts() {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`max-w-sm rounded-lg px-3 py-2 text-center text-sm shadow-lg ${
+          className={`toast-in max-w-sm rounded-lg px-3 py-2 text-center text-sm shadow-lg ${
             t.tone === 'error' ? 'bg-cinnabar text-porcelain' : 'bg-lacquer text-porcelain ring-1 ring-brass/40'
           }`}
         >

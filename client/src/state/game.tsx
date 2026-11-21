@@ -25,7 +25,7 @@ export interface Toast {
   tone: 'info' | 'error';
 }
 
-interface GameContextValue {
+export interface GameContextValue {
   status: ConnStatus;
   view: RoomView | null;
   session: SessionInfo | null;
@@ -50,7 +50,8 @@ interface GameContextValue {
   newMatch: () => Promise<ClientAck>;
 }
 
-const GameContext = createContext<GameContextValue | null>(null);
+/** Exported so the effects preview can stand in a local, server-less game. */
+export const GameContext = createContext<GameContextValue | null>(null);
 
 const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string | undefined) || undefined;
 const ACK_TIMEOUT = 8000;

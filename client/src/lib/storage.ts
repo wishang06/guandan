@@ -22,4 +22,5 @@ export const KEYS = {
   nickname: 'guandan:nickname',
   lang: 'guandan:lang',
   muted: 'guandan:muted',
+  fx: 'guandan:fx',
 } as const;
