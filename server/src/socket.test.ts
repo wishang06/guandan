@@ -126,3 +126,31 @@ describe('socket server', () => {
     expect(await c.emitWithAck('room:start')).toMatchObject({ ok: false, error: 'not_in_room' });
   });
 });
+
+describe('origin checks', () => {
+  it('refuses handshakes from origins not in CLIENT_ORIGIN, over polling and WebSocket', async () => {
+    const strict = createApp({ origins: ['https://good.example'] });
+    await new Promise<void>((r) => strict.httpServer.listen(0, r));
+    const base = `http://localhost:${(strict.httpServer.address() as AddressInfo).port}`;
+    const attempt = (origin: string, transports: ('websocket' | 'polling')[]) =>
+      new Promise<boolean>((resolve) => {
+        const c = connect(base, { transports, forceNew: true, reconnection: false, extraHeaders: { origin } });
+        c.on('connect', () => {
+          c.disconnect();
+          resolve(true);
+        });
+        c.on('connect_error', () => {
+          c.disconnect();
+          resolve(false);
+        });
+      });
+    try {
+      expect(await attempt('https://good.example', ['websocket'])).toBe(true);
+      expect(await attempt('https://evil.example', ['websocket'])).toBe(false);
+      expect(await attempt('https://good.example', ['polling'])).toBe(true);
+      expect(await attempt('https://evil.example', ['polling'])).toBe(false);
+    } finally {
+      await strict.close();
+    }
+  });
+});

@@ -40,6 +40,9 @@ export function createApp(opts: AppOptions = {}): {
     cors: {
       origin: (origin, cb) => cb(null, allowed(origin)),
     },
+    // CORS only covers HTTP long-polling; check the Origin on every handshake so
+    // WebSocket connections from other sites are refused too.
+    allowRequest: (req, cb) => cb(null, allowed(req.headers.origin)),
     maxHttpBufferSize: 64 * 1024,
   });
   attachSocketHandlers(io, manager);

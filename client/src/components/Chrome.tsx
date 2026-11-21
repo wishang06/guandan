@@ -66,6 +66,16 @@ export function Toasts() {
 export function ConnectionBanner() {
   const { status, replaced, resume } = useGame();
   const { t } = useI18n();
+  // Free hosting tiers sleep when idle; after a few seconds explain the wait.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (status === 'online') {
+      setSlow(false);
+      return;
+    }
+    const id = setTimeout(() => setSlow(true), 5000);
+    return () => clearTimeout(id);
+  }, [status]);
   if (replaced) {
     return (
       <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-6 text-center">
@@ -81,7 +91,7 @@ export function ConnectionBanner() {
   if (status === 'online') return null;
   return (
     <div className="fixed inset-x-0 top-0 z-50 bg-cinnabar py-1 text-center text-sm" role="status">
-      {status === 'connecting' ? t('connecting') : t('reconnecting')}
+      {slow ? t('wakingUp') : status === 'connecting' ? t('connecting') : t('reconnecting')}
     </div>
   );
 }
