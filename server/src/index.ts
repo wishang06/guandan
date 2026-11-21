@@ -1,29 +1,20 @@
-import { createServer } from 'node:http';
-import { Server } from 'socket.io';
-import { GAME_NAME } from '@guandan/shared';
+import { createApp } from './app';
 
 const PORT = Number(process.env.PORT ?? 3001);
-const CLIENT_ORIGIN = (process.env.CLIENT_ORIGIN ?? 'http://localhost:5173')
+const origins = (process.env.CLIENT_ORIGIN ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
 
-const httpServer = createServer((req, res) => {
-  if (req.url === '/health') {
-    res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, name: GAME_NAME }));
-    return;
-  }
-  res.writeHead(404);
-  res.end();
-});
-
-const io = new Server(httpServer, { cors: { origin: CLIENT_ORIGIN } });
-
-io.on('connection', (socket) => {
-  socket.emit('hello', { name: GAME_NAME });
-});
+const { httpServer, close } = createApp({ origins });
 
 httpServer.listen(PORT, () => {
-  console.log(`[server] listening on :${PORT}`);
+  console.log(`[server] listening on :${PORT} (origins: ${origins.length ? origins.join(', ') : 'any'})`);
 });
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    console.log(`[server] ${signal} received, shutting down`);
+    void close().then(() => process.exit(0));
+  });
+}
